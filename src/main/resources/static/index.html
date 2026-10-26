@@ -1,241 +1,531 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="dark">
+<html lang="es" data-theme="dark" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PulseSync — Plataforma en Tiempo Real con WebSockets</title>
+    <title>PulseSync — Chat estilo Slack con WebSockets, Archivos & WebRTC</title>
+
+    <!-- Tailwind Play CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: ["class", '[data-theme="dark"]'],
+            theme: {
+                extend: {
+                    colors: {
+                        border: "hsl(var(--border))",
+                        input: "hsl(var(--input))",
+                        ring: "hsl(var(--ring))",
+                        background: "hsl(var(--background))",
+                        foreground: "hsl(var(--foreground))",
+                        primary: {
+                            DEFAULT: "hsl(var(--primary))",
+                            foreground: "hsl(var(--primary-foreground))",
+                        },
+                        secondary: {
+                            DEFAULT: "hsl(var(--secondary))",
+                            foreground: "hsl(var(--secondary-foreground))",
+                        },
+                        destructive: {
+                            DEFAULT: "hsl(var(--destructive))",
+                            foreground: "hsl(var(--destructive-foreground))",
+                        },
+                        muted: {
+                            DEFAULT: "hsl(var(--muted))",
+                            foreground: "hsl(var(--muted-foreground))",
+                        },
+                        accent: {
+                            DEFAULT: "hsl(var(--accent))",
+                            foreground: "hsl(var(--accent-foreground))",
+                        },
+                        popover: {
+                            DEFAULT: "hsl(var(--popover))",
+                            foreground: "hsl(var(--popover-foreground))",
+                        },
+                        card: {
+                            DEFAULT: "hsl(var(--card))",
+                            foreground: "hsl(var(--card-foreground))",
+                        },
+                    },
+                    borderRadius: {
+                        lg: "var(--radius)",
+                        md: "calc(var(--radius) - 2px)",
+                        sm: "calc(var(--radius) - 4px)",
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Estilos de la aplicación -->
     <link rel="stylesheet" href="css/app.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 </head>
-<body>
+<body class="bg-background text-foreground flex h-screen w-screen overflow-hidden select-none">
 
-    <!-- MODAL DE INGRESO / REGISTRO INICIAL -->
-    <div id="joinModal" class="modal-backdrop">
-        <div class="modal-card">
-            <div class="modal-header">
-                <div class="logo-badge">⚡ PulseSync</div>
-                <h2>Bienvenido a Tiempo Real</h2>
-                <p>Elige tu nombre y avatar para conectarte vía WebSocket</p>
+    <!-- ============================================================== -->
+    <!-- MODAL DE INGRESO / REGISTRO INICIAL (SHADCN DIALOG)           -->
+    <!-- ============================================================== -->
+    <div id="joinModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+        <div class="bg-card text-card-foreground border border-border w-full max-w-md rounded-xl shadow-2xl p-6 relative animate-in fade-in zoom-in-95 duration-200">
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="h-10 w-10 rounded-lg bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                    ⚡
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold tracking-tight">PulseSync Workspace</h2>
+                    <p class="text-xs text-muted-foreground">Comunicación en tiempo real estilo Slack</p>
+                </div>
             </div>
-            <form id="joinForm" class="modal-form">
-                <div class="form-group">
-                    <label for="usernameInput">Nombre de usuario</label>
-                    <input type="text" id="usernameInput" placeholder="Ej. AlexDeveloper" required maxlength="25" autocomplete="off">
+
+            <form id="joinForm" class="space-y-4">
+                <div>
+                    <label class="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1 block">Tu Nombre de Usuario</label>
+                    <input type="text" id="usernameInput" placeholder="Ej. AlexDeveloper" required maxlength="25" autofocus
+                        class="w-full bg-input/40 border border-border rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition" />
                 </div>
 
-                <div class="form-group">
-                    <label>Selecciona tu Avatar</label>
-                    <div class="avatar-selector" id="avatarSelector">
-                        <button type="button" class="avatar-opt active" data-avatar="🚀">🚀</button>
-                        <button type="button" class="avatar-opt" data-avatar="⚡">⚡</button>
-                        <button type="button" class="avatar-opt" data-avatar="💻">💻</button>
-                        <button type="button" class="avatar-opt" data-avatar="🤖">🤖</button>
-                        <button type="button" class="avatar-opt" data-avatar="🦊">🦊</button>
-                        <button type="button" class="avatar-opt" data-avatar="👾">👾</button>
-                        <button type="button" class="avatar-opt" data-avatar="🔥">🔥</button>
-                        <button type="button" class="avatar-opt" data-avatar="⭐">⭐</button>
+                <div>
+                    <label class="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1 block">Elige tu Avatar</label>
+                    <div class="grid grid-cols-4 gap-2" id="avatarSelector">
+                        <button type="button" class="avatar-opt h-11 rounded-lg border border-border bg-accent/40 flex items-center justify-center text-2xl hover:border-primary transition" data-avatar="🚀">🚀</button>
+                        <button type="button" class="avatar-opt h-11 rounded-lg border border-border bg-accent/40 flex items-center justify-center text-2xl hover:border-primary transition" data-avatar="⚡">⚡</button>
+                        <button type="button" class="avatar-opt h-11 rounded-lg border border-border bg-accent/40 flex items-center justify-center text-2xl hover:border-primary transition" data-avatar="💻">💻</button>
+                        <button type="button" class="avatar-opt h-11 rounded-lg border border-border bg-accent/40 flex items-center justify-center text-2xl hover:border-primary transition" data-avatar="🤖">🤖</button>
+                        <button type="button" class="avatar-opt h-11 rounded-lg border border-border bg-accent/40 flex items-center justify-center text-2xl hover:border-primary transition" data-avatar="🦊">🦊</button>
+                        <button type="button" class="avatar-opt h-11 rounded-lg border border-border bg-accent/40 flex items-center justify-center text-2xl hover:border-primary transition" data-avatar="👾">👾</button>
+                        <button type="button" class="avatar-opt h-11 rounded-lg border border-border bg-accent/40 flex items-center justify-center text-2xl hover:border-primary transition" data-avatar="🔥">🔥</button>
+                        <button type="button" class="avatar-opt h-11 rounded-lg border border-border bg-accent/40 flex items-center justify-center text-2xl hover:border-primary transition" data-avatar="⭐">⭐</button>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="initialRoomSelect">Sala inicial</label>
-                    <select id="initialRoomSelect">
-                        <option value="general">💬 General</option>
-                        <option value="tecnologia">⚡ Tecnología</option>
-                        <option value="anuncios">📢 Anuncios</option>
-                        <option value="random">🎲 Random</option>
+                <div>
+                    <label class="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1 block">Canal Inicial</label>
+                    <select id="initialRoomSelect" class="w-full bg-input/40 border border-border rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition">
+                        <option value="general"># general (Charla comunitaria)</option>
+                        <option value="tecnologia"># tecnologia (Desarrollo & WebSockets)</option>
+                        <option value="anuncios"># anuncios (Novedades del equipo)</option>
+                        <option value="random"># random (Memes & charla casual)</option>
                     </select>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-block">Conectarse a PulseSync</button>
+                <button type="submit" class="w-full py-2.5 px-4 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm shadow-md transition flex items-center justify-center space-x-2">
+                    <span>Entrar al Espacio de Trabajo</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
             </form>
         </div>
     </div>
 
-    <!-- CONTENEDOR PRINCIPAL DE LA APLICACIÓN -->
-    <div class="app-layout">
+    <!-- ============================================================== -->
+    <!-- BARRA LATERAL IZQUIERDA TIPO SLACK (WORKSPACE RAIL)           -->
+    <!-- ============================================================== -->
+    <nav class="w-16 bg-[#121417] border-r border-border/50 flex flex-col items-center py-3.5 space-y-4 shrink-0 z-20">
+        <!-- Workspace Icon -->
+        <div class="relative group">
+            <button class="w-11 h-11 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center text-white font-extrabold text-lg shadow-md hover:rounded-lg transition-all duration-200">
+                PS
+            </button>
+            <div class="absolute -left-1 top-2.5 w-1 h-6 bg-white rounded-r-full"></div>
+            <span class="absolute left-16 top-2.5 hidden group-hover:flex bg-popover text-popover-foreground text-xs font-medium px-2 py-1 rounded shadow-lg border border-border whitespace-nowrap z-50">
+                PulseSync Workspace
+            </span>
+        </div>
 
-        <!-- OVERLAY PARA MÓVIL (CIERRA DRAWER) -->
-        <div id="mobileBackdrop" class="drawer-backdrop"></div>
+        <div class="w-8 h-[1px] bg-border/40"></div>
 
-        <!-- BARRA LATERAL IZQUIERDA: SALAS Y PERFIL -->
-        <aside id="sidebar" class="sidebar">
-            <div class="sidebar-header">
-                <div class="brand">
-                    <span class="brand-icon">⚡</span>
-                    <span class="brand-name">PulseSync</span>
-                </div>
-                <div class="connection-status" id="connectionStatus" title="Estado de WebSocket">
-                    <span class="status-dot online"></span>
-                    <span class="status-text" id="statusText">Conectando...</span>
-                </div>
+        <!-- Navigation shortcuts -->
+        <button id="navChatBtn" class="w-10 h-10 rounded-lg flex items-center justify-center text-primary bg-accent/60 hover:bg-accent transition" title="Canales y Mensajes">
+            <i data-lucide="message-square" class="w-5 h-5"></i>
+        </button>
+
+        <button id="navHuddleBtn" class="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/40 transition relative" title="Huddle / Llamadas en vivo">
+            <i data-lucide="headphones" class="w-5 h-5"></i>
+            <span id="huddleIndicatorDot" class="hidden absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping"></span>
+        </button>
+
+        <div class="flex-1"></div>
+
+        <!-- System Controls: Sound, Theme, User -->
+        <button id="soundToggleBtn" class="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/40 transition" title="Activar/Silenciar Sonido">
+            <span id="soundIcon" class="text-base">🔊</span>
+        </button>
+
+        <button id="themeToggleBtn" class="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/40 transition" title="Cambiar Tema Claro/Oscuro">
+            <span id="themeIcon" class="text-base">🌙</span>
+        </button>
+
+        <!-- Current User Avatar in Rail -->
+        <div class="relative group cursor-pointer pt-2">
+            <div id="currentUserAvatarRail" class="w-10 h-10 rounded-lg bg-primary/20 border border-primary/40 flex items-center justify-center text-xl shadow">
+                🚀
             </div>
+            <span class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-[#121417] rounded-full"></span>
+        </div>
+    </nav>
 
-            <!-- PERFIL DEL USUARIO CONECTADO -->
-            <div class="user-profile-widget">
-                <div class="user-avatar" id="currentUserAvatar">🚀</div>
-                <div class="user-info">
-                    <div class="user-name" id="currentUserName">Invitado</div>
-                    <div class="user-role">En línea • WebSocket OK</div>
-                </div>
+    <!-- ============================================================== -->
+    <!-- SLACK CHANNELS & DM SIDEBAR (260px)                            -->
+    <!-- ============================================================== -->
+    <aside id="sidebar" class="w-64 bg-[#181a1f] border-r border-border flex flex-col shrink-0 z-10 select-none">
+        <!-- Workspace Header -->
+        <div class="h-14 border-b border-border/80 px-4 flex items-center justify-between font-bold text-sm tracking-tight text-foreground/90">
+            <div class="flex items-center space-x-2 truncate">
+                <span class="truncate">PulseSync Team</span>
+                <i data-lucide="chevron-down" class="w-4 h-4 text-muted-foreground shrink-0"></i>
             </div>
+            <button id="connectionStatusBadge" class="flex items-center space-x-1.5 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-normal">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span id="statusText">En línea</span>
+            </button>
+        </div>
 
-            <!-- LISTA DE SALAS / CANALES -->
-            <div class="sidebar-section">
-                <div class="section-title">
-                    <span>SALAS DISPONIBLES</span>
-                    <span class="badge" id="totalRoomsBadge">4</span>
+        <!-- Channels & DM Scrollable Content -->
+        <div class="flex-1 overflow-y-auto px-2 py-3 space-y-4">
+            <!-- Canales Section -->
+            <div>
+                <div class="flex items-center justify-between px-2 mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
+                    <span>Canales</span>
+                    <span id="totalRoomsBadge" class="text-[10px] bg-accent px-1.5 py-0.2 rounded font-mono">4</span>
                 </div>
-                <ul class="room-list" id="roomList">
+                <ul id="roomList" class="space-y-0.5">
                     <!-- Dinámico vía JS -->
                 </ul>
             </div>
 
-            <!-- CONTROLES INFERIORES: TEMA Y SONIDO -->
-            <div class="sidebar-footer">
-                <button type="button" class="btn-icon" id="themeToggleBtn" title="Cambiar tema">
-                    <span id="themeIcon">🌙</span>
-                    <span class="btn-label">Modo Claro/Oscuro</span>
+            <!-- Miembros en la sala activa Section -->
+            <div>
+                <div class="flex items-center justify-between px-2 mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
+                    <span>En Sala (<span id="infoMembersCount">0</span>)</span>
+                </div>
+                <ul id="usersList" class="space-y-0.5">
+                    <!-- Dinámico vía JS -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- Mini Huddle Dock (visible cuando estás en llamada) -->
+        <div id="huddleMiniDock" class="hidden border-t border-border bg-emerald-950/30 p-2.5 flex items-center justify-between animate-in fade-in">
+            <div class="flex items-center space-x-2 truncate">
+                <div class="audio-wave">
+                    <span class="audio-bar"></span>
+                    <span class="audio-bar"></span>
+                    <span class="audio-bar"></span>
+                </div>
+                <div class="truncate">
+                    <div class="text-xs font-semibold text-emerald-400 truncate">Huddle en curso</div>
+                    <div class="text-[10px] text-muted-foreground" id="huddleMiniStatus">Audio conectado</div>
+                </div>
+            </div>
+            <div class="flex items-center space-x-1">
+                <button id="dockMuteBtn" class="p-1.5 rounded hover:bg-accent text-foreground" title="Silenciar">
+                    <i data-lucide="mic" class="w-4 h-4"></i>
                 </button>
-                <button type="button" class="btn-icon" id="soundToggleBtn" title="Activar/Silenciar sonido">
-                    <span id="soundIcon">🔊</span>
-                    <span class="btn-label">Sonido</span>
+                <button id="dockLeaveBtn" class="p-1.5 rounded hover:bg-destructive/20 text-destructive" title="Salir">
+                    <i data-lucide="phone-off" class="w-4 h-4"></i>
                 </button>
             </div>
-        </aside>
+        </div>
 
-        <!-- ÁREA CENTRAL: CHAT Y ENCUESTA EN VIVO -->
-        <main class="chat-main">
-            <!-- CABECERA DE LA SALA ACTIVA -->
-            <header class="chat-header">
-                <div class="header-left">
-                    <button type="button" class="mobile-toggle-btn" id="mobileMenuBtn" aria-label="Abrir menú">
-                        ☰
-                    </button>
-                    <span class="active-room-icon" id="activeRoomIcon">💬</span>
-                    <div class="room-details">
-                        <h2 class="active-room-title" id="activeRoomTitle">#general</h2>
-                        <span class="active-room-desc" id="activeRoomDesc">Charla comunitaria y bienvenida</span>
-                    </div>
-                </div>
+        <!-- Current User Profile Card -->
+        <div class="p-3 border-t border-border flex items-center space-x-2.5 bg-accent/20">
+            <div class="relative">
+                <div id="currentUserAvatar" class="w-8 h-8 rounded-md bg-primary/20 flex items-center justify-center text-lg">🚀</div>
+                <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border border-background"></span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p id="currentUserName" class="text-xs font-semibold truncate">Invitado</p>
+                <p class="text-[10px] text-muted-foreground truncate">WebSocket conectado</p>
+            </div>
+        </div>
+    </aside>
 
-                <div class="header-right">
-                    <div class="online-chip" id="roomOnlineChip" title="Usuarios en esta sala">
-                        👥 <span id="roomOnlineCount">0</span> en sala
-                    </div>
-                    <button type="button" class="btn-icon mobile-only" id="mobileMembersBtn" title="Ver usuarios">
-                        👥
-                    </button>
-                    <button type="button" class="btn-icon mobile-only" id="mobilePollBtn" title="Ver encuesta">
-                        📊
-                    </button>
-                </div>
-            </header>
+    <!-- ============================================================== -->
+    <!-- ÁREA PRINCIPAL DE CHAT TIPO SLACK                              -->
+    <!-- ============================================================== -->
+    <main class="flex-1 flex flex-col h-full min-w-0 bg-background relative" id="chatDropTarget">
 
-            <!-- WIDGET DE ENCUESTA EN VIVO (EXPANDIBLE) -->
-            <section class="live-poll-card" id="pollCard">
-                <div class="poll-header" id="pollHeaderToggle">
-                    <div class="poll-badge">📊 ENCUESTA EN VIVO</div>
-                    <h3 class="poll-question" id="pollQuestion">Cargando encuesta interactiva...</h3>
-                    <div class="poll-meta">
-                        <span id="pollTotalVotes">0 votos totales</span>
-                        <span class="toggle-arrow" id="pollToggleArrow">▼</span>
-                    </div>
-                </div>
-                <div class="poll-body" id="pollBody">
-                    <div class="poll-options" id="pollOptionsContainer">
-                        <!-- Opciones dinámicas con barras de porcentaje en vivo -->
-                    </div>
-                </div>
-            </section>
+        <!-- OVERLAY DE DRAG & DROP -->
+        <div id="dropOverlay" class="hidden absolute inset-0 z-40 bg-background/90 backdrop-blur-sm border-2 border-dashed border-primary flex flex-col items-center justify-center space-y-3 pointer-events-none">
+            <div class="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-lg animate-bounce">
+                <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+            </div>
+            <h3 class="text-lg font-bold">Suelta los archivos aquí</h3>
+            <p class="text-sm text-muted-foreground">Se adjuntarán instantáneamente al chat de <span id="dropRoomLabel" class="font-semibold text-primary">#general</span></p>
+        </div>
 
-            <!-- CONTENEDOR DE MENSAJES DEL CHAT -->
-            <div class="messages-container" id="messagesContainer">
-                <div class="loading-messages" id="messagesLoading">
-                    <div class="spinner"></div>
-                    <p>Sincronizando mensajes con el servidor WebSocket...</p>
+        <!-- CABECERA DEL CANAL (SLACK HEADER) -->
+        <header class="h-14 border-b border-border px-4 flex items-center justify-between shrink-0 bg-card/60 backdrop-blur-sm z-10">
+            <div class="flex items-center space-x-3 min-w-0">
+                <button id="mobileMenuBtn" class="md:hidden p-1.5 rounded hover:bg-accent text-foreground">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </button>
+                <span id="activeRoomIcon" class="text-xl">💬</span>
+                <div class="min-w-0">
+                    <div class="flex items-center space-x-2">
+                        <h1 id="activeRoomTitle" class="text-base font-bold tracking-tight truncate">#general</h1>
+                        <button class="text-muted-foreground hover:text-amber-400 transition" title="Favorito">
+                            <i data-lucide="star" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                    <p id="activeRoomDesc" class="text-xs text-muted-foreground truncate">Charla comunitaria y bienvenida</p>
                 </div>
-                <div class="messages-list" id="messagesList"></div>
             </div>
 
-            <!-- INDICADOR DE USUARIOS ESCRIBIENDO -->
-            <div class="typing-indicator" id="typingIndicator">
-                <span class="typing-dots">
-                    <span></span><span></span><span></span>
+            <!-- Botones de Acción de Cabecera (Huddle, Compartir Pantalla, Encuesta, Miembros) -->
+            <div class="flex items-center space-x-2">
+                <!-- Botón de Huddle / Llamada en vivo -->
+                <button id="startCallBtn" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-border hover:bg-emerald-500/10 hover:border-emerald-500/40 hover:text-emerald-400 text-xs font-semibold transition" title="Iniciar llamada de voz y video en este canal">
+                    <i data-lucide="headphones" class="w-4 h-4"></i>
+                    <span>Huddle</span>
+                </button>
+
+                <!-- Botón de Compartir Pantalla Directo -->
+                <button id="shareScreenHeaderBtn" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-border hover:bg-indigo-500/10 hover:border-indigo-500/40 hover:text-indigo-400 text-xs font-semibold transition" title="Compartir pantalla inmediatamente">
+                    <i data-lucide="screen-share" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">Pantalla</span>
+                </button>
+
+                <!-- Botón Encuesta Toggle -->
+                <button id="togglePollBtn" class="p-2 rounded-lg border border-border hover:bg-accent text-muted-foreground hover:text-foreground transition" title="Encuesta Interactiva">
+                    <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+                </button>
+
+                <!-- Contador de participantes -->
+                <div class="hidden sm:flex items-center space-x-1 text-xs text-muted-foreground border-l border-border pl-3 ml-1">
+                    <i data-lucide="users" class="w-3.5 h-3.5"></i>
+                    <span id="roomOnlineCount">0</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- BANNER DE LLAMADA / HUDDLE EN CURSO EN LA SALA -->
+        <div id="roomCallBanner" class="hidden bg-emerald-950/40 border-b border-emerald-500/30 px-4 py-2 flex items-center justify-between text-xs text-emerald-300">
+            <div class="flex items-center space-x-2">
+                <span class="flex h-2 w-2 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
-                <span class="typing-text" id="typingText"></span>
+                <span class="font-semibold">Huddle en vivo en este canal</span>
+                <span class="text-muted-foreground">• Conexión WebRTC P2P</span>
+            </div>
+            <button id="joinCallBannerBtn" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition flex items-center space-x-1">
+                <i data-lucide="phone-call" class="w-3.5 h-3.5"></i>
+                <span>Unirse al Huddle</span>
+            </button>
+        </div>
+
+        <!-- TARJETA DE ENCUESTA EN VIVO (SHADCN CARD ESTILO SLACK CANVAS) -->
+        <section id="pollCard" class="mx-4 mt-3 bg-card border border-border rounded-xl shadow-sm overflow-hidden transition-all duration-200">
+            <div id="pollHeaderToggle" class="px-4 py-2.5 bg-accent/30 flex items-center justify-between cursor-pointer hover:bg-accent/50 transition">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-primary">📊 Encuesta en Vivo</span>
+                    <h3 id="pollQuestion" class="text-xs font-semibold truncate max-w-md">Cargando encuesta interactiva...</h3>
+                </div>
+                <div class="flex items-center space-x-2 text-xs text-muted-foreground">
+                    <span id="pollTotalVotes">0 votos</span>
+                    <i data-lucide="chevron-down" id="pollChevron" class="w-4 h-4 transition-transform duration-200"></i>
+                </div>
+            </div>
+            <div id="pollBody" class="p-3 space-y-2 border-t border-border/50">
+                <div id="pollOptionsContainer" class="space-y-1.5">
+                    <!-- Opciones dinámicas con barras de porcentaje -->
+                </div>
+            </div>
+        </section>
+
+        <!-- CONTENEDOR DE MENSAJES DEL CHAT (SLACK FEED) -->
+        <div id="messagesContainer" class="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+            <div id="messagesLoading" class="flex items-center justify-center py-12 text-sm text-muted-foreground space-x-2">
+                <div class="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <span>Sincronizando mensajes con el servidor WebSocket...</span>
+            </div>
+            <div id="messagesList" class="space-y-3"></div>
+        </div>
+
+        <!-- INDICADOR DE USUARIOS ESCRIBIENDO (TYPING INDICATOR) -->
+        <div id="typingIndicator" class="h-6 px-4 flex items-center space-x-2 text-xs text-muted-foreground opacity-0 transition-opacity duration-200">
+            <div class="flex space-x-1">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+            <span id="typingText"></span>
+        </div>
+
+        <!-- ÁREA DE ENTRADA DE MENSAJES (SLACK INPUT BOX CON DRAG & DROP) -->
+        <footer class="p-4 pt-1 border-t border-border bg-card/40">
+            <!-- ARCHIVOS ADJUNTOS PRE-ENVÍO (STAGED ATTACHMENTS) -->
+            <div id="stagedAttachments" class="hidden mb-2 p-2 bg-accent/40 border border-border rounded-lg flex flex-wrap gap-2 items-center">
+                <!-- Se llena dinámicamente cuando el usuario arrastra o selecciona archivos -->
             </div>
 
-            <!-- BARRA DE ENTRADA DE MENSAJES -->
-            <footer class="chat-input-area">
-                <!-- ACCIONES RÁPIDAS DE EMOJIS -->
-                <div class="quick-emojis-bar">
-                    <button type="button" class="emoji-chip" data-emoji="🔥">🔥</button>
-                    <button type="button" class="emoji-chip" data-emoji="🚀">🚀</button>
-                    <button type="button" class="emoji-chip" data-emoji="👍">👍</button>
-                    <button type="button" class="emoji-chip" data-emoji="❤️">❤️</button>
-                    <button type="button" class="emoji-chip" data-emoji="🎉">🎉</button>
-                    <button type="button" class="emoji-chip" data-emoji="💡">💡</button>
-                    <button type="button" class="emoji-chip" data-emoji="🤖">🤖</button>
+            <div class="border border-border focus-within:border-primary/80 focus-within:ring-1 focus-within:ring-primary/40 rounded-xl bg-card overflow-hidden shadow-sm transition">
+                <!-- Barra de formato superior (Slack formatting tools) -->
+                <div class="flex items-center justify-between px-3 py-1.5 border-b border-border/60 bg-accent/20 text-muted-foreground text-xs">
+                    <div class="flex items-center space-x-1">
+                        <button type="button" class="p-1 rounded hover:bg-accent hover:text-foreground" id="btnBold" title="Negrita (**texto**)">
+                            <i data-lucide="bold" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button type="button" class="p-1 rounded hover:bg-accent hover:text-foreground" id="btnItalic" title="Cursiva (*texto*)">
+                            <i data-lucide="italic" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button type="button" class="p-1 rounded hover:bg-accent hover:text-foreground" id="btnCode" title="Código (`código`)">
+                            <i data-lucide="code" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <div class="w-[1px] h-3.5 bg-border mx-1"></div>
+                        <!-- Botón Adjuntar Archivo (Input file oculto) -->
+                        <input type="file" id="fileAttachmentInput" multiple class="hidden" />
+                        <button type="button" id="triggerFileBtn" class="flex items-center space-x-1 p-1 px-1.5 rounded hover:bg-accent hover:text-foreground" title="Adjuntar archivos o arrastra y suelta">
+                            <i data-lucide="paperclip" class="w-3.5 h-3.5"></i>
+                            <span class="text-[11px] font-medium">Adjuntar</span>
+                        </button>
+                        <!-- Botón Rápido Compartir Pantalla -->
+                        <button type="button" id="inputShareScreenBtn" class="flex items-center space-x-1 p-1 px-1.5 rounded hover:bg-accent hover:text-foreground" title="Compartir pantalla">
+                            <i data-lucide="screen-share" class="w-3.5 h-3.5"></i>
+                            <span class="text-[11px] font-medium">Pantalla</span>
+                        </button>
+                    </div>
+
+                    <div class="text-[11px] text-muted-foreground/80 hidden sm:block">
+                        <span>Arrastra archivos directamente aquí</span>
+                    </div>
                 </div>
 
-                <form id="chatForm" class="message-input-form">
-                    <textarea id="messageInput" placeholder="Escribe un mensaje en tiempo real... (Presiona Enter para enviar)" rows="1" maxlength="1000"></textarea>
-                    <button type="submit" id="sendBtn" class="btn-send" title="Enviar mensaje">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                        </svg>
+                <!-- Formulario de Texto y Envío -->
+                <form id="chatForm" class="flex items-end p-2 space-x-2">
+                    <textarea id="messageInput" rows="1" placeholder="Escribe un mensaje o arrastra archivos... (Enter para enviar)"
+                        class="flex-1 bg-transparent border-0 focus:outline-none resize-none text-sm text-foreground placeholder:text-muted-foreground/60 max-h-32 min-h-[38px] py-1.5 px-2 leading-relaxed"></textarea>
+
+                    <!-- Emojis Popover Button -->
+                    <div class="relative">
+                        <button type="button" id="emojiToggleBtn" class="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition" title="Emojis">
+                            <i data-lucide="smile" class="w-4 h-4"></i>
+                        </button>
+                        <!-- Selector de Emojis desplegable -->
+                        <div id="emojiPickerPop" class="hidden absolute bottom-10 right-0 z-50 bg-popover border border-border rounded-xl shadow-xl p-2 w-64 grid grid-cols-6 gap-1 text-xl">
+                            <button type="button" class="emoji-pick hover:scale-125 transition p-1">👍</button>
+                            <button type="button" class="emoji-pick hover:scale-125 transition p-1">🔥</button>
+                            <button type="button" class="emoji-pick hover:scale-125 transition p-1">🚀</button>
+                            <button type="button" class="emoji-pick hover:scale-125 transition p-1">❤️</button>
+                            <button type="button" class="emoji-pick hover:scale-125 transition p-1">🎉</button>
+                            <button type="button" class="emoji-pick hover:scale-125 transition p-1">💡</button>
+                            <button type="button" class="emoji-pick hover:scale-125 transition p-1">💻</button>
+                            <button type="button" class="emoji-pick hover:scale-125 transition p-1">🤖</button>
+                            <button type="button" class="emoji-pick hover:scale-125 transition p-1">⭐</button>
+                            <button type="button" class="emoji-pick hover:scale-125 transition p-1">👀</button>
+                            <button type="button" class="emoji-pick hover:scale-125 transition p-1">🙌</button>
+                            <button type="button" class="emoji-pick hover:scale-125 transition p-1">✅</button>
+                        </div>
+                    </div>
+
+                    <!-- Botón Enviar -->
+                    <button type="submit" id="sendBtn" class="p-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground shadow transition flex items-center justify-center" title="Enviar Mensaje">
+                        <i data-lucide="send" class="w-4 h-4"></i>
                     </button>
                 </form>
-            </footer>
-        </main>
-
-        <!-- BARRA LATERAL DERECHA: USUARIOS EN LÍNEA Y ACTIVIDAD (DESKTOP) -->
-        <aside id="infoPanel" class="info-sidebar">
-            <div class="info-header">
-                <h3>👥 Miembros Activos</h3>
-                <span class="badge" id="infoMembersCount">0</span>
             </div>
-            <ul class="users-list" id="usersList">
-                <!-- Dinámico vía JS -->
-            </ul>
+        </footer>
+    </main>
 
-            <div class="info-header activity-header">
-                <h3>⚡ Actividad en Vivo</h3>
-            </div>
-            <div class="activity-feed" id="activityFeed">
-                <div class="activity-item">
-                    <span class="activity-icon">🟢</span>
-                    <span class="activity-desc">Servidor WebSocket listo</span>
+    <!-- ============================================================== -->
+    <!-- MODAL DE LLAMADA EN TIEMPO REAL & SCREEN SHARE (WEBRTC HUDDLE) -->
+    <!-- ============================================================== -->
+    <div id="callModal" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col p-4 animate-in fade-in duration-200">
+        <!-- Cabecera de la Llamada -->
+        <div class="h-12 flex items-center justify-between text-white border-b border-white/10 px-2 shrink-0">
+            <div class="flex items-center space-x-3">
+                <div class="h-8 w-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                    <i data-lucide="headphones" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold flex items-center space-x-2">
+                        <span>Huddle en vivo: <span id="callRoomTitle">#general</span></span>
+                        <span id="callParticipantCountBadge" class="text-[11px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-mono">1 participante</span>
+                    </h3>
                 </div>
             </div>
-        </aside>
 
+            <div class="flex items-center space-x-2">
+                <button id="minimizeCallModalBtn" class="p-2 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition" title="Minimizar a dock">
+                    <i data-lucide="minimize-2" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Contenedor de Video Grid y Pantalla Compartida -->
+        <div class="flex-1 overflow-hidden p-4 flex items-center justify-center min-h-0">
+            <div id="videoGrid" class="video-grid">
+                <!-- Local Video Tile -->
+                <div id="localVideoContainer" class="video-tile">
+                    <video id="localVideo" autoplay playsinline muted></video>
+                    <div id="localVideoPlaceholder" class="video-tile-avatar hidden">🚀</div>
+                    <div class="video-tile-meta">
+                        <span id="localUserLabel">Tú</span>
+                        <span id="localMicIcon">🎙️</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barra Flotante de Controles de Llamada (Shadcn Pill Controls) -->
+        <div class="h-16 shrink-0 flex items-center justify-center">
+            <div class="bg-zinc-900/90 border border-white/10 rounded-full px-4 py-2 flex items-center space-x-3 shadow-2xl backdrop-blur-md">
+                <!-- Toggle Micrófono -->
+                <button id="callMicToggleBtn" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition" title="Silenciar / Activar Micrófono">
+                    <i data-lucide="mic" id="micIcon" class="w-4 h-4"></i>
+                </button>
+
+                <!-- Toggle Cámara -->
+                <button id="callCamToggleBtn" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition" title="Encender / Apagar Video">
+                    <i data-lucide="video" id="camIcon" class="w-4 h-4"></i>
+                </button>
+
+                <!-- Compartir Pantalla -->
+                <button id="callScreenShareToggleBtn" class="px-3.5 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center space-x-2 font-medium text-xs shadow transition" title="Compartir tu pantalla en tiempo real">
+                    <i data-lucide="screen-share" class="w-4 h-4"></i>
+                    <span id="screenShareBtnLabel">Compartir Pantalla</span>
+                </button>
+
+                <!-- Colgar / Salir del Huddle -->
+                <button id="callHangupBtn" class="w-10 h-10 rounded-full bg-destructive hover:bg-destructive/90 text-white flex items-center justify-center shadow transition" title="Salir de la llamada">
+                    <i data-lucide="phone-off" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
     </div>
 
-    <!-- NAVEGACIÓN INFERIOR PARA MÓVIL (BOTTOM TAB BAR) -->
-    <nav class="mobile-bottom-nav">
-        <button type="button" class="mobile-tab-btn active" data-tab="chat">
-            <span class="tab-icon">💬</span>
-            <span class="tab-label">Chat</span>
+    <!-- ============================================================== -->
+    <!-- MODAL LIGHTBOX DE IMÁGENES FULL RESOLUTION                     -->
+    <!-- ============================================================== -->
+    <div id="imageLightboxModal" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4">
+        <button id="closeLightboxBtn" class="absolute top-4 right-4 text-white/80 hover:text-white p-2 rounded-full bg-white/10 transition">
+            <i data-lucide="x" class="w-6 h-6"></i>
         </button>
-        <button type="button" class="mobile-tab-btn" data-tab="rooms">
-            <span class="tab-icon">📁</span>
-            <span class="tab-label">Salas</span>
-        </button>
-        <button type="button" class="mobile-tab-btn" data-tab="poll">
-            <span class="tab-icon">📊</span>
-            <span class="tab-label">Votación</span>
-        </button>
-        <button type="button" class="mobile-tab-btn" data-tab="members">
-            <span class="tab-icon">👥</span>
-            <span class="tab-label">Usuarios</span>
-        </button>
-    </nav>
+        <img id="lightboxImage" src="" alt="Vista previa" class="max-w-[90vw] max-h-[85vh] rounded-lg shadow-2xl object-contain border border-white/10" />
+        <div class="mt-4 flex items-center space-x-3">
+            <a id="lightboxDownloadBtn" href="#" download="archivo" class="px-4 py-2 rounded-lg bg-primary text-white text-xs font-semibold flex items-center space-x-2 hover:bg-primary/90 transition shadow">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span>Descargar Imagen</span>
+            </a>
+        </div>
+    </div>
 
-    <!-- TOAST NOTIFICACIONES FLOTANTES -->
-    <div id="toastContainer" class="toast-container"></div>
+    <!-- TOAST NOTIFICACIONES FLOTANTES (SHADCN TOAST) -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
 
+    <!-- Scripts de la aplicación -->
     <script src="js/app.js"></script>
+    <script>
+        // Inicializar iconos de Lucide al cargar
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        });
+    </script>
 </body>
 </html>
