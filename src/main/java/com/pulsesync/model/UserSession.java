@@ -10,14 +10,14 @@ public class UserSession {
     private String username;
     private String avatar;
     private String currentRoom;
-    private final Instant joinedAt;
+    private final String joinedAt;
 
     public UserSession(String sessionId, String username, String avatar, String currentRoom) {
         this.sessionId = sessionId;
         this.username = username;
         this.avatar = avatar;
         this.currentRoom = currentRoom;
-        this.joinedAt = Instant.now();
+        this.joinedAt = Instant.now().toString();
     }
 
     public String getSessionId() {
@@ -48,7 +48,7 @@ public class UserSession {
         this.currentRoom = currentRoom;
     }
 
-    public Instant getJoinedAt() {
+    public String getJoinedAt() {
         return joinedAt;
     }
 }
