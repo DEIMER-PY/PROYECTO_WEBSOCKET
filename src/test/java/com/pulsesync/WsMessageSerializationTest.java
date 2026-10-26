@@ -35,4 +35,19 @@ class WsMessageSerializationTest {
         assertEquals("⚡", deserialized.getAvatar());
         assertEquals("Mensaje de prueba", deserialized.getContent());
     }
+
+    @Test
+    @DisplayName("Debe serializar y deserializar CALL_SIGNAL para WebRTC")
+    void testCallSignalSerialization() throws Exception {
+        WsMessage signal = new WsMessage(MessageType.CALL_SIGNAL, "Oferta de llamada");
+        signal.setRoomId("general");
+        signal.setPayload(Map.of("signalType", "offer", "sdp", "v=0..."));
+
+        String json = objectMapper.writeValueAsString(signal);
+        assertTrue(json.contains("\"type\":\"CALL_SIGNAL\""));
+
+        WsMessage deserialized = objectMapper.readValue(json, WsMessage.class);
+        assertEquals(MessageType.CALL_SIGNAL, deserialized.getType());
+        assertNotNull(deserialized.getPayload());
+    }
 }

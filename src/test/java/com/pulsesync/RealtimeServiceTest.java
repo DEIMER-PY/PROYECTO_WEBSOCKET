@@ -84,4 +84,17 @@ class RealtimeServiceTest {
         msg.addReaction("👍");
         assertEquals(1, msg.getReactions().get("👍"));
     }
+
+    @Test
+    @DisplayName("Debe crear mensajes de chat con adjuntos (drag-and-drop / archivos)")
+    void testChatMessageWithAttachments() {
+        ChatMessage msg = new ChatMessage("general", "Alex", "🚀", "Revisa este documento",
+                "reporte.pdf", "application/pdf", 102400L, "data:application/pdf;base64,JVBERi0xLjQK...");
+
+        assertNotNull(msg.getId());
+        assertEquals("reporte.pdf", msg.getFileName());
+        assertEquals("application/pdf", msg.getFileType());
+        assertEquals(102400L, msg.getFileSize());
+        assertTrue(msg.getFileData().startsWith("data:application/pdf;base64"));
+    }
 }
