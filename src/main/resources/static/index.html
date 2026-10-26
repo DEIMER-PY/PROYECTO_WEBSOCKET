@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PulseSync — Plataforma en Tiempo Real con WebSockets</title>
+    <link rel="stylesheet" href="css/app.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+
+    <!-- MODAL DE INGRESO / REGISTRO INICIAL -->
+    <div id="joinModal" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="logo-badge">⚡ PulseSync</div>
+                <h2>Bienvenido a Tiempo Real</h2>
+                <p>Elige tu nombre y avatar para conectarte vía WebSocket</p>
+            </div>
+            <form id="joinForm" class="modal-form">
+                <div class="form-group">
+                    <label for="usernameInput">Nombre de usuario</label>
+                    <input type="text" id="usernameInput" placeholder="Ej. AlexDeveloper" required maxlength="25" autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label>Selecciona tu Avatar</label>
+                    <div class="avatar-selector" id="avatarSelector">
+                        <button type="button" class="avatar-opt active" data-avatar="🚀">🚀</button>
+                        <button type="button" class="avatar-opt" data-avatar="⚡">⚡</button>
+                        <button type="button" class="avatar-opt" data-avatar="💻">💻</button>
+                        <button type="button" class="avatar-opt" data-avatar="🤖">🤖</button>
+                        <button type="button" class="avatar-opt" data-avatar="🦊">🦊</button>
+                        <button type="button" class="avatar-opt" data-avatar="👾">👾</button>
+                        <button type="button" class="avatar-opt" data-avatar="🔥">🔥</button>
+                        <button type="button" class="avatar-opt" data-avatar="⭐">⭐</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="initialRoomSelect">Sala inicial</label>
+                    <select id="initialRoomSelect">
+                        <option value="general">💬 General</option>
+                        <option value="tecnologia">⚡ Tecnología</option>
+                        <option value="anuncios">📢 Anuncios</option>
+                        <option value="random">🎲 Random</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Conectarse a PulseSync</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR PRINCIPAL DE LA APLICACIÓN -->
+    <div class="app-layout">
+
+        <!-- OVERLAY PARA MÓVIL (CIERRA DRAWER) -->
+        <div id="mobileBackdrop" class="drawer-backdrop"></div>
+
+        <!-- BARRA LATERAL IZQUIERDA: SALAS Y PERFIL -->
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <span class="brand-icon">⚡</span>
+                    <span class="brand-name">PulseSync</span>
+                </div>
+                <div class="connection-status" id="connectionStatus" title="Estado de WebSocket">
+                    <span class="status-dot online"></span>
+                    <span class="status-text" id="statusText">Conectando...</span>
+                </div>
+            </div>
+
+            <!-- PERFIL DEL USUARIO CONECTADO -->
+            <div class="user-profile-widget">
+                <div class="user-avatar" id="currentUserAvatar">🚀</div>
+                <div class="user-info">
+                    <div class="user-name" id="currentUserName">Invitado</div>
+                    <div class="user-role">En línea • WebSocket OK</div>
+                </div>
+            </div>
+
+            <!-- LISTA DE SALAS / CANALES -->
+            <div class="sidebar-section">
+                <div class="section-title">
+                    <span>SALAS DISPONIBLES</span>
+                    <span class="badge" id="totalRoomsBadge">4</span>
+                </div>
+                <ul class="room-list" id="roomList">
+                    <!-- Dinámico vía JS -->
+                </ul>
+            </div>
+
+            <!-- CONTROLES INFERIORES: TEMA Y SONIDO -->
+            <div class="sidebar-footer">
+                <button type="button" class="btn-icon" id="themeToggleBtn" title="Cambiar tema">
+                    <span id="themeIcon">🌙</span>
+                    <span class="btn-label">Modo Claro/Oscuro</span>
+                </button>
+                <button type="button" class="btn-icon" id="soundToggleBtn" title="Activar/Silenciar sonido">
+                    <span id="soundIcon">🔊</span>
+                    <span class="btn-label">Sonido</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- ÁREA CENTRAL: CHAT Y ENCUESTA EN VIVO -->
+        <main class="chat-main">
+            <!-- CABECERA DE LA SALA ACTIVA -->
+            <header class="chat-header">
+                <div class="header-left">
+                    <button type="button" class="mobile-toggle-btn" id="mobileMenuBtn" aria-label="Abrir menú">
+                        ☰
+                    </button>
+                    <span class="active-room-icon" id="activeRoomIcon">💬</span>
+                    <div class="room-details">
+                        <h2 class="active-room-title" id="activeRoomTitle">#general</h2>
+                        <span class="active-room-desc" id="activeRoomDesc">Charla comunitaria y bienvenida</span>
+                    </div>
+                </div>
+
+                <div class="header-right">
+                    <div class="online-chip" id="roomOnlineChip" title="Usuarios en esta sala">
+                        👥 <span id="roomOnlineCount">0</span> en sala
+                    </div>
+                    <button type="button" class="btn-icon mobile-only" id="mobileMembersBtn" title="Ver usuarios">
+                        👥
+                    </button>
+                    <button type="button" class="btn-icon mobile-only" id="mobilePollBtn" title="Ver encuesta">
+                        📊
+                    </button>
+                </div>
+            </header>
+
+            <!-- WIDGET DE ENCUESTA EN VIVO (EXPANDIBLE) -->
+            <section class="live-poll-card" id="pollCard">
+                <div class="poll-header" id="pollHeaderToggle">
+                    <div class="poll-badge">📊 ENCUESTA EN VIVO</div>
+                    <h3 class="poll-question" id="pollQuestion">Cargando encuesta interactiva...</h3>
+                    <div class="poll-meta">
+                        <span id="pollTotalVotes">0 votos totales</span>
+                        <span class="toggle-arrow" id="pollToggleArrow">▼</span>
+                    </div>
+                </div>
+                <div class="poll-body" id="pollBody">
+                    <div class="poll-options" id="pollOptionsContainer">
+                        <!-- Opciones dinámicas con barras de porcentaje en vivo -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- CONTENEDOR DE MENSAJES DEL CHAT -->
+            <div class="messages-container" id="messagesContainer">
+                <div class="loading-messages" id="messagesLoading">
+                    <div class="spinner"></div>
+                    <p>Sincronizando mensajes con el servidor WebSocket...</p>
+                </div>
+                <div class="messages-list" id="messagesList"></div>
+            </div>
+
+            <!-- INDICADOR DE USUARIOS ESCRIBIENDO -->
+            <div class="typing-indicator" id="typingIndicator">
+                <span class="typing-dots">
+                    <span></span><span></span><span></span>
+                </span>
+                <span class="typing-text" id="typingText"></span>
+            </div>
+
+            <!-- BARRA DE ENTRADA DE MENSAJES -->
+            <footer class="chat-input-area">
+                <!-- ACCIONES RÁPIDAS DE EMOJIS -->
+                <div class="quick-emojis-bar">
+                    <button type="button" class="emoji-chip" data-emoji="🔥">🔥</button>
+                    <button type="button" class="emoji-chip" data-emoji="🚀">🚀</button>
+                    <button type="button" class="emoji-chip" data-emoji="👍">👍</button>
+                    <button type="button" class="emoji-chip" data-emoji="❤️">❤️</button>
+                    <button type="button" class="emoji-chip" data-emoji="🎉">🎉</button>
+                    <button type="button" class="emoji-chip" data-emoji="💡">💡</button>
+                    <button type="button" class="emoji-chip" data-emoji="🤖">🤖</button>
+                </div>
+
+                <form id="chatForm" class="message-input-form">
+                    <textarea id="messageInput" placeholder="Escribe un mensaje en tiempo real... (Presiona Enter para enviar)" rows="1" maxlength="1000"></textarea>
+                    <button type="submit" id="sendBtn" class="btn-send" title="Enviar mensaje">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                        </svg>
+                    </button>
+                </form>
+            </footer>
+        </main>
+
+        <!-- BARRA LATERAL DERECHA: USUARIOS EN LÍNEA Y ACTIVIDAD (DESKTOP) -->
+        <aside id="infoPanel" class="info-sidebar">
+            <div class="info-header">
+                <h3>👥 Miembros Activos</h3>
+                <span class="badge" id="infoMembersCount">0</span>
+            </div>
+            <ul class="users-list" id="usersList">
+                <!-- Dinámico vía JS -->
+            </ul>
+
+            <div class="info-header activity-header">
+                <h3>⚡ Actividad en Vivo</h3>
+            </div>
+            <div class="activity-feed" id="activityFeed">
+                <div class="activity-item">
+                    <span class="activity-icon">🟢</span>
+                    <span class="activity-desc">Servidor WebSocket listo</span>
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- NAVEGACIÓN INFERIOR PARA MÓVIL (BOTTOM TAB BAR) -->
+    <nav class="mobile-bottom-nav">
+        <button type="button" class="mobile-tab-btn active" data-tab="chat">
+            <span class="tab-icon">💬</span>
+            <span class="tab-label">Chat</span>
+        </button>
+        <button type="button" class="mobile-tab-btn" data-tab="rooms">
+            <span class="tab-icon">📁</span>
+            <span class="tab-label">Salas</span>
+        </button>
+        <button type="button" class="mobile-tab-btn" data-tab="poll">
+            <span class="tab-icon">📊</span>
+            <span class="tab-label">Votación</span>
+        </button>
+        <button type="button" class="mobile-tab-btn" data-tab="members">
+            <span class="tab-icon">👥</span>
+            <span class="tab-label">Usuarios</span>
+        </button>
+    </nav>
+
+    <!-- TOAST NOTIFICACIONES FLOTANTES -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
