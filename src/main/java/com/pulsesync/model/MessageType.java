@@ -16,5 +16,7 @@ public enum MessageType {
     POLL_UPDATE,     // Actualización del estado de la encuesta
     ROOM_LIST,       // Lista de salas disponibles y participantes
     CHANGE_ROOM,     // Cambio de sala activa por el cliente
+    CALL_SIGNAL,     // Señalización WebRTC (llamadas de audio/video y pantalla compartida)
+    CALL_STATE,      // Estado de participantes en llamada dentro de la sala
     ERROR            // Notificación de error
 }

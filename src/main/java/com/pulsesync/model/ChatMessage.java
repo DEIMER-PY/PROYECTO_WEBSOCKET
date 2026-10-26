@@ -14,15 +14,28 @@ public class ChatMessage {
     private final String sender;
     private final String avatar;
     private final String content;
+    private final String fileName;
+    private final String fileType;
+    private final Long fileSize;
+    private final String fileData;
     private final String timestamp;
     private final Map<String, Integer> reactions; // emoji -> count
 
     public ChatMessage(String roomId, String sender, String avatar, String content) {
+        this(roomId, sender, avatar, content, null, null, null, null);
+    }
+
+    public ChatMessage(String roomId, String sender, String avatar, String content,
+                       String fileName, String fileType, Long fileSize, String fileData) {
         this.id = UUID.randomUUID().toString();
         this.roomId = roomId;
         this.sender = sender;
         this.avatar = avatar;
         this.content = content;
+        this.fileName = fileName;
+        this.fileType = fileType;
+        this.fileSize = fileSize;
+        this.fileData = fileData;
         this.timestamp = Instant.now().toString();
         this.reactions = new ConcurrentHashMap<>();
     }
@@ -49,6 +62,22 @@ public class ChatMessage {
 
     public String getContent() {
         return content;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public String getFileType() {
+        return fileType;
+    }
+
+    public Long getFileSize() {
+        return fileSize;
+    }
+
+    public String getFileData() {
+        return fileData;
     }
 
     public String getTimestamp() {
