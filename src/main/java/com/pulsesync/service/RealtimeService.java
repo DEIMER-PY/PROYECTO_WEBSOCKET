@@ -104,13 +104,25 @@ public class RealtimeService {
     }
 
     public void handleChatMessage(String sessionId, String content) {
+        handleChatMessage(sessionId, content, null, null, null, null);
+    }
+
+    public void handleChatMessage(String sessionId, String content, String fileName, String fileType, Long fileSize, String fileData) {
         UserSession user = userSessions.get(sessionId);
-        if (user == null || content == null || content.trim().isEmpty()) {
+        if (user == null) {
+            return;
+        }
+
+        boolean hasText = content != null && !content.trim().isEmpty();
+        boolean hasFile = fileData != null && !fileData.isEmpty();
+        if (!hasText && !hasFile) {
             return;
         }
 
         String roomId = user.getCurrentRoom();
-        ChatMessage msg = new ChatMessage(roomId, user.getUsername(), user.getAvatar(), content.trim());
+        String safeContent = hasText ? content.trim() : (fileName != null ? "Adjuntó un archivo: " + fileName : "");
+        ChatMessage msg = new ChatMessage(roomId, user.getUsername(), user.getAvatar(), safeContent,
+                fileName, fileType, fileSize, fileData);
 
         List<ChatMessage> history = roomHistories.computeIfAbsent(roomId, k -> new CopyOnWriteArrayList<>());
         if (history.size() >= MAX_HISTORY_PER_ROOM) {
@@ -121,8 +133,42 @@ public class RealtimeService {
         WsMessage wsMsg = createMessage(MessageType.CHAT, roomId, msg);
         wsMsg.setSender(user.getUsername());
         wsMsg.setAvatar(user.getAvatar());
-        wsMsg.setContent(content.trim());
+        wsMsg.setContent(safeContent);
         broadcastToRoom(roomId, wsMsg, null);
+    }
+
+    public void handleCallSignal(String sessionId, WsMessage message) {
+        UserSession sender = userSessions.get(sessionId);
+        if (sender == null) return;
+
+        String roomId = sender.getCurrentRoom();
+        message.setRoomId(roomId);
+        message.setSender(sender.getUsername());
+        message.setAvatar(sender.getAvatar());
+
+        if (message.getPayload() instanceof Map<?, ?> map) {
+            String targetSessionId = (String) map.get("targetSessionId");
+
+            // Enriquecer el payload con la identidad y el sessionId del emisor
+            Map<String, Object> enrichedPayload = new HashMap<>();
+            map.forEach((k, v) -> enrichedPayload.put(k.toString(), v));
+            enrichedPayload.put("senderSessionId", sessionId);
+            enrichedPayload.put("senderUsername", sender.getUsername());
+            enrichedPayload.put("senderAvatar", sender.getAvatar());
+            message.setPayload(enrichedPayload);
+
+            // Si hay un targetSessionId específico (comunicación P2P), enviar solo a él
+            if (targetSessionId != null && !targetSessionId.isEmpty()) {
+                WebSocketSession targetWs = wsSessions.get(targetSessionId);
+                if (targetWs != null) {
+                    sendToSession(targetWs, message);
+                    return;
+                }
+            }
+        }
+
+        // Si es un broadcast de llamada (ej. unirse, salir o anuncio global de llamada), transmitir a la sala
+        broadcastToRoom(roomId, message, sessionId);
     }
 
     public void handleTyping(String sessionId, boolean isTyping) {

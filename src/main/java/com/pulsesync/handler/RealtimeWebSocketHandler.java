@@ -49,7 +49,25 @@ public class RealtimeWebSocketHandler extends TextWebSocketHandler {
                     String avatar = wsMsg.getAvatar() != null ? wsMsg.getAvatar() : "🚀";
                     realtimeService.registerUser(session, username, avatar, wsMsg.getRoomId());
                 }
-                case CHAT -> realtimeService.handleChatMessage(session.getId(), wsMsg.getContent());
+                case CHAT -> {
+                    String fileName = null;
+                    String fileType = null;
+                    Long fileSize = null;
+                    String fileData = null;
+
+                    if (wsMsg.getPayload() instanceof Map<?, ?> map) {
+                        fileName = (String) map.get("fileName");
+                        fileType = (String) map.get("fileType");
+                        if (map.get("fileSize") != null) {
+                            try {
+                                fileSize = Long.parseLong(map.get("fileSize").toString());
+                            } catch (Exception ignored) {}
+                        }
+                        fileData = (String) map.get("fileData");
+                    }
+                    realtimeService.handleChatMessage(session.getId(), wsMsg.getContent(), fileName, fileType, fileSize, fileData);
+                }
+                case CALL_SIGNAL -> realtimeService.handleCallSignal(session.getId(), wsMsg);
                 case TYPING -> {
                     boolean isTyping = true;
                     if (wsMsg.getPayload() instanceof Map<?, ?> map && map.containsKey("isTyping")) {
